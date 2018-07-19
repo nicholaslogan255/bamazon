@@ -59,88 +59,23 @@ function start() {
                     }
                 }
 
-                // show quantity availiable and price, ask for quantity
-                inquirer.prompt([
-                    {
-                        name: "quantity",
-                        type: "input",
-                        message: `${chosenItem.item_name}: ${chosenItem.stock_quantity} in stock. Unit Price: $${chosenItem.price}\n`
-                            + `How many would you like to purchace?`
-                    }
-                ])
-                    .then(function (answer) {
-
-                        // determine if quantity in database is bigger than the amount ordered
-                        if (chosenItem.stock_quantity >= parseInt(answer.quantity)) {
-                            //console.log("HAVE STOCK");
-
-                            var totalPrice = parseInt(answer.quantity) * chosenItem.price;
-                            var newQuantity = chosenItem.stock_quantity - parseInt(answer.quantity)
-
-                            connection.query(
-                                "UPDATE products SET ? WHERE ?",
-                                [
-                                    {
-                                        stock_quantity: newQuantity
-                                    },
-                                    {
-                                        item_id: chosenItem.item_id
-                                    }
-                                ],
-                                function (error) {
-                                    if (error) throw err;
-                                    console.log("Object purchaced successfully!");
-                                    console.log(`You purchase has a total cost of $${totalPrice}`);
-                                    start();
-                                }
-                            );
-                        }
-                        else {
-                            // 
-                            console.log("Your order quantity exceeds our inventory for that item.");
-                            start();
-                        }
-
-                    })
-
-                // console.log(`You selected: ${chosenItem.item_name}`);
-                // console.log(`stock: ${chosenItem.stock_quantity}`);
-
-
+                // ask the user for quantity, and if stock is sufficient, sell them their order
+                selectQuantity(chosenItem);
             });
     });
-} // end start
 
 
+    function selectQuantity(chosenItem) {
 
-// function to handle posting new items up for auction
-function post() {
-    // prompt for info about the item being put up for auction
-    inquirer
-        .prompt([
+        // show quantity availiable and price, ask for quantity
+        inquirer.prompt([
             {
-                name: "item",
+                name: "quantity",
                 type: "input",
-                message: "What is the item you would like to submit?"
-            },
-            {
-                name: "category",
-                type: "input",
-                message: "What category would you like to place your auction in?"
-            },
-            {
-                name: "startingBid",
-                type: "input",
-                message: "What would you like your starting bid to be?",
-                validate: function (value) {
-                    if (isNaN(value) === false) {
-                        return true;
-                    }
-                    return false;
-                }
+                message: `\n${chosenItem.item_name}: ${chosenItem.stock_quantity} in stock. Unit Price: $${chosenItem.price}\n`
+                    + `How many would you like to purchace?`
             }
-        ])
-        .then(function (answer) {
+        ]).then(function (answer) {
 
             // determine if quantity in database is bigger than the amount ordered
             if (chosenItem.stock_quantity >= parseInt(answer.quantity)) {
@@ -149,6 +84,7 @@ function post() {
                 var totalPrice = parseInt(answer.quantity) * chosenItem.price;
                 var newQuantity = chosenItem.stock_quantity - parseInt(answer.quantity)
 
+                // update database with new quantity
                 connection.query(
                     "UPDATE products SET ? WHERE ?",
                     [
@@ -161,18 +97,84 @@ function post() {
                     ],
                     function (error) {
                         if (error) throw err;
-                        console.log("Object purchaced successfully!");
+                        console.log("\nObject purchaced successfully!");
                         console.log(`You purchase has a total cost of $${totalPrice}`);
                         start();
                     }
                 );
             }
             else {
-                // bid wasn't high enough, so apologize and start over
-                console.log("Your order quantity exceeds our inventory for that item.");
-                start();
+                // 
+                console.log("\nYour order quantity exceeds our inventory for that item.");
+                selectQuantity(chosenItem);
             }
 
+        }); 
+    }
+} // end start
 
-        });
-}
+
+
+    // // function to handle posting new items up for auction
+    // function post() {
+    //     // prompt for info about the item being put up for auction
+    //     inquirer
+    //         .prompt([
+    //             {
+    //                 name: "item",
+    //                 type: "input",
+    //                 message: "What is the item you would like to submit?"
+    //             },
+    //             {
+    //                 name: "category",
+    //                 type: "input",
+    //                 message: "What category would you like to place your auction in?"
+    //             },
+    //             {
+    //                 name: "startingBid",
+    //                 type: "input",
+    //                 message: "What would you like your starting bid to be?",
+    //                 validate: function (value) {
+    //                     if (isNaN(value) === false) {
+    //                         return true;
+    //                     }
+    //                     return false;
+    //                 }
+    //             }
+    //         ])
+    //         .then(function (answer) {
+
+    //             // determine if quantity in database is bigger than the amount ordered
+    //             if (chosenItem.stock_quantity >= parseInt(answer.quantity)) {
+    //                 //console.log("HAVE STOCK");
+
+    //                 var totalPrice = parseInt(answer.quantity) * chosenItem.price;
+    //                 var newQuantity = chosenItem.stock_quantity - parseInt(answer.quantity)
+
+    //                 connection.query(
+    //                     "UPDATE products SET ? WHERE ?",
+    //                     [
+    //                         {
+    //                             stock_quantity: newQuantity
+    //                         },
+    //                         {
+    //                             item_id: chosenItem.item_id
+    //                         }
+    //                     ],
+    //                     function (error) {
+    //                         if (error) throw err;
+    //                         console.log("Object purchaced successfully!");
+    //                         console.log(`You purchase has a total cost of $${totalPrice}`);
+    //                         start();
+    //                     }
+    //                 );
+    //             }
+    //             else {
+    //                 // bid wasn't high enough, so apologize and start over
+    //                 console.log("Your order quantity exceeds our inventory for that item.");
+    //                 start();
+    //             }
+
+
+    //         });
+    // }
