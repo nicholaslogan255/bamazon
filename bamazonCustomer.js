@@ -27,7 +27,7 @@ function start() {
         //insert newline
         console.log("");
 
-        // once you have the items, create user prompt the user for product and quantity
+        // once you have the items, create user prompt to find product
         inquirer.prompt([
             {
                 name: "product",
@@ -75,9 +75,15 @@ function start() {
                     + `How many would you like to purchace?`
             }
         ]).then(function (answer) {
+            
+            // check if user typed in an integer number
+            if(  isNaN(parseInt(answer.quantity) )){
+                console.log("\nError: Only integer numbers allowed");
+                selectQuantity(chosenItem);
+            }
 
-            // if the user typed in a negative number
-            if(parseInt(answer.quantity) < 0){
+            // if the user typed in a negative number (zero is allowed)
+            else if(parseInt(answer.quantity) < 0){
                 // log error and start transaction over
                 console.log("\nError: Negative quantities are not allowed!");
                 selectQuantity(chosenItem);
