@@ -51,6 +51,7 @@ function start() {
 
                 default: // if request doesn't make sense, start over
                     console.log("Error | Invalid menu option | Starting Over.");
+
                     start();
             }
 
@@ -106,63 +107,95 @@ function viewLowInventory() {
 function addToInventory() {
     console.log("Inside add to inventory");
 
-    var chosenItem = findItem();
 
-    // show quantity in stock, ask for how much to add
-    inquirer.prompt([
-        {
-            name: "quantity",
-            type: "input",
-            message: `\n${chosenItem.item_name}: ${chosenItem.stock_quantity} in stock.\n`
-                + `How many would you like to add to the inventory?`
-        }
-    ]).then(function (answer) {
+    // query the database for all items in products table
+    connection.query("SELECT * FROM products", function (err, results) {
+        if (err) throw err;
 
-        // check if user typed in an integer number
-        if (isNaN(parseInt(answer.quantity))) {
-            console.log("\nError: Only integer numbers allowed");
-            selectQuantity(chosenItem);
-        }
+        // once you have the items, create user prompt to find which item they want to edit
+        inquirer.prompt([
+            {
+                name: "product",
+                type: "rawlist",
+                // creates an array which will be the list of choices of products to purchace
+                choices: function () {
+                    var choiceArray = [];
 
-        // if the user typed in a negative number (zero is allowed)
-        else if (parseInt(answer.quantity) < 0) {
-            // log error and start transaction over
-            console.log("\nError: Negative quantities are not allowed!");
-            selectQuantity(chosenItem);
-
-        }
-        else { // if the user typed in a reasonable number in 
-
-            var newQuantity = answer.quantity + chosenItem.stock_quantity;
-
-            // update database with new quantity
-            connection.query(
-                "UPDATE products SET ? WHERE ?",
-                [
-                    {
-                        stock_quantity: newQuantity
-                    },
-                    {
-                        item_id: chosenItem.item_id
+                    // add every object in the database to the array
+                    for (var i = 0; i < results.length; i++) {
+                        choiceArray.push(results[i].item_name);
                     }
-                ],
-                function (error) { // after attempting to add object
-                    if (error) throw err;
+                    return choiceArray;
+                },
+                message: "What item would you like to add more?"
+            }
+        ])
+            .then(function (answer) {
 
-                    // log result and go back to the menu
-                    console.log("\nAddition Complete!");
-                    console.log(`There is now ${newQuantity} in stock!`);
-                    start();
+                var chosenItem;
+
+                // search through every item for the one with the matching name and return it
+                for (var i = 0; i < results.length; i++) {
+                    if (results[i].item_name === answer.product) {
+                        chosenItem = results[i];
+                    }
                 }
-            );
 
-        }
+                // show quantity in stock, ask for how much to add
+                inquirer.prompt([
+                    {
+                        name: "quantity",
+                        type: "input",
+                        message: `\n${chosenItem.item_name}: ${chosenItem.stock_quantity} in stock.\n`
+                            + `How many would you like to add to the inventory?`
+                    }
+                ]).then(function (answer) {
+
+                    // check if user typed in an integer number
+                    if (isNaN(parseInt(answer.quantity))) {
+                        console.log("\nError: Only integer numbers allowed");
+                        selectQuantity(chosenItem);
+                    }
+
+                    // if the user typed in a negative number (zero is allowed)
+                    else if (parseInt(answer.quantity) < 0) {
+                        // log error and start transaction over
+                        console.log("\nError: Negative quantities are not allowed!");
+                        selectQuantity(chosenItem);
+
+                    }
+                    else { // if the user typed in a reasonable number in 
+
+                        var newQuantity = parseInt(answer.quantity) + chosenItem.stock_quantity;
+
+                        // update database with new quantity
+                        connection.query(
+                            "UPDATE products SET ? WHERE ?",
+                            [
+                                {
+                                    stock_quantity: newQuantity
+                                },
+                                {
+                                    item_id: chosenItem.item_id
+                                }
+                            ],
+                            function (error) { // after attempting to add object
+                                if (error) throw err;
+
+                                // log result and go back to the menu
+                                console.log("\nAddition Complete!");
+                                console.log(`There is now ${newQuantity} in stock!`);
+                                start();
+                            }
+                        );
+
+                    }
+
+                });
+
+            });
 
     });
-
-
-
-
 
 }
 
@@ -200,6 +233,8 @@ function addNewProduct() {
         }
     ]).then(function (answer) {
 
+        console.log("Recieved answer")
+
         newName = answer.name;
         newDepartment = answer.department;
 
@@ -213,68 +248,29 @@ function addNewProduct() {
 
             newPrice = parseFloat(answer.price);
         }
+
+        console.log(`name: ${newName} ${typeof(newName)}`);
+        console.log(`department: ${newDepartment} ${typeof(newDepartment)}`);
+        console.log(`quantity: ${newQuantity} ${typeof(newQuantity)}`);
+        console.log(`price: ${newPrice} ${typeof(newPrice)}`);
+
+        
+
+        var query = "INSERT INTO products (item_name, price, stock_quantity, department_name) VALUES (?,?,?,?)";
+
+        console.log(query);
+
+
+        // insert item into database 
+        connection.query(query,[newName, newPrice, newQuantity, newDepartment], function (err, results) {
+            if (err) throw err;
+
+            // log result and go back to the menu
+            console.log("\nObject created successfully!");
+            start();
+
+        });
     });
-
-
-
-    // insert item into database 
-    connection.query(`INSERT INTO products ( item_name, price, stock_quantity, department_name) VALUES (${newName},${newPrice},${newQuantity},${newDepartment})`, function (err, results) {
-        if (error) throw err;
-
-        // log result and go back to the menu
-        console.log("\nObject created successfully!");
-        start();
-
-    });
-
 
 }
 
-
-// have the user select which item they
-function findItem() {
-
-
-    // query the database for all items in products table
-    connection.query("SELECT * FROM products", function (err, results) {
-        if (err) throw err;
-
-        // once you have the items, create user prompt to find which item they want to edit
-        inquirer.prompt([
-            {
-                name: "product",
-                type: "rawlist",
-                // creates an array which will be the list of choices of products to purchace
-                choices: function () {
-                    var choiceArray = [];
-
-                    // add every object in the database to the array
-                    for (var i = 0; i < results.length; i++) {
-                        choiceArray.push(results[i].item_name);
-                    }
-                    return choiceArray;
-                },
-                message: "What item would you like to add more?"
-            }
-        ])
-            .then(function (answer) {
-
-                // search through every item for the one with the matching name and return it
-                for (var i = 0; i < results.length; i++) {
-                    if (results[i].item_name === answer.product) {
-                        return results[i];
-                    }
-                }
-
-                // if (for whatever reason) no product was selected, return nothing
-                return null;
-
-
-            });
-
-
-    });
-
-
-
-}
